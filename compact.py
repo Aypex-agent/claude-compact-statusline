@@ -9,6 +9,8 @@ Width: $PHONE_SL_WIDTH, else $COLUMNS, else the controlling tty, else 48;
 capped at $PHONE_SL_MAX (default 120; the original phone build used 72).
 $PHONE_SL_MARGIN (default 4) leaves room for Claude Code's indent.
 $PHONE_SL_FACE=0 hides the face next to the context band word.
+$PHONE_SL_TOOL_ROWS (default 2) caps the rows listing enabled plugins and
+project MCP servers; 0 hides them.
 
 Born as the phone-terminal statusline of a Claude Code instance running
 in a proot container; promoted to the desktop once it proved less
@@ -151,6 +153,59 @@ def git_info(cwd):
     return branch, mod, new, ahead, behind
 
 
+def active_tools(project_dir):
+    """Plugins enabled for this session and the project's MCP servers, in
+    first-seen order with marketplace suffixes dropped. Project-armed ones
+    come first: they are what changes from project to project."""
+    seen = {}
+    home = os.path.expanduser("~")
+    files = []
+    if project_dir:
+        files += [os.path.join(project_dir, ".claude", "settings.json"),
+                  os.path.join(project_dir, ".claude", "settings.local.json")]
+    files.append(os.path.join(home, ".claude", "settings.json"))
+    for sf in files:
+        try:
+            with open(sf) as f:
+                data = json.load(f)
+        except (OSError, ValueError):
+            continue
+        for key, val in (data.get("enabledPlugins") or {}).items():
+            if val is True:
+                seen.setdefault(key.split("@", 1)[0], None)
+    if project_dir:
+        try:
+            with open(os.path.join(project_dir, ".mcp.json")) as f:
+                for name in (json.load(f).get("mcpServers") or {}):
+                    seen.setdefault(f"mcp:{name}", None)
+        except (OSError, ValueError):
+            pass
+    return list(seen)
+
+
+def wrap_tools(names, width, max_rows):
+    """Lay names out comma-separated over at most max_rows rows of width;
+    what does not fit becomes a trailing +N on the last row."""
+    rows, cur = [], ""
+    for i, name in enumerate(names):
+        cand = f"{cur}, {name}" if cur else name
+        if len(cand) <= width:
+            cur = cand
+            continue
+        if len(rows) + 1 >= max_rows:
+            left = len(names) - i
+            tail = f" +{left}"
+            cur = cur[:max(0, width - len(tail) - 1)].rstrip(", ") + "…" if len(cur) + len(tail) > width else cur
+            cur += tail
+            rows.append(cur)
+            return rows
+        rows.append(cur)
+        cur = name[:width]
+    if cur:
+        rows.append(cur)
+    return rows
+
+
 def context_from_transcript(path):
     """Fallback: last assistant usage in the transcript."""
     try:
@@ -270,12 +325,24 @@ def main():
     right = f"{GREEN}+{added}{RST} {RED}-{removed}{RST}" if added or removed else ""
     use_row = spread(left, right, inner)
 
+    # ── rows 5+: active plugins and MCP servers (yas-style list) ───────
+    tool_rows = []
+    max_rows = int(os.environ.get("PHONE_SL_TOOL_ROWS", "2"))
+    if max_rows > 0:
+        names = active_tools(ws.get("project_dir") or cwd)
+        if names:
+            # first row carries the glyph; later rows indent under it
+            for i, text in enumerate(wrap_tools(names, inner - 2, max_rows)):
+                lead = f"{CYAN}⚙{RST} " if i == 0 else "  "
+                tool_rows.append(f"{lead}{GREY}{text}{RST}")
+
     def row(s):
         pad = inner - vis_len(s)
         return f"{GREY}│{RST} {s}{' ' * max(0, pad)} {GREY}│{RST}"
 
-    lines = [top, row(ctx_row), row(loc_row), row(use_row),
-             f"{GREY}╰{'─' * (W - 2)}╯{RST}"]
+    lines = [top, row(ctx_row), row(loc_row), row(use_row)]
+    lines += [row(s) for s in tool_rows]
+    lines.append(f"{GREY}╰{'─' * (W - 2)}╯{RST}")
     print("\n".join(lines))
 
 

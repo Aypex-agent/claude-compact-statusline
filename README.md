@@ -12,7 +12,9 @@ Python file, standard library only, no Nerd Font required.
 ```
 
 Four rows: model and clock; context fill; directory and git state; cost,
-session time and lines changed. Every row is laid out for a narrow phone
+session time and lines changed. Below those, up to two rows list the plugins
+enabled for the session (user and project settings) and the project's MCP
+servers, so what is armed is always in view. Every row is laid out for a narrow phone
 terminal first and only spreads out when there is room, so the same file
 works in a 48-column Termux window and a wide desktop terminal.
 
@@ -63,6 +65,7 @@ All optional, set in the environment the status line command runs in
 | `PHONE_SL_MAX`    | `120`   | Width cap; the original phone build used `72`       |
 | `PHONE_SL_MARGIN` | `4`     | Columns left free for Claude Code's own indent      |
 | `PHONE_SL_FACE`   | `1`     | `0` hides the face and keeps just the word          |
+| `PHONE_SL_TOOL_ROWS` | `2`  | Max rows for the plugin and MCP list; `0` hides it  |
 
 ## Origin
 
