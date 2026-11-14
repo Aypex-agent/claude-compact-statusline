@@ -77,8 +77,6 @@ const CHAT_PROMPT = (thread: ChatLine[]) =>
   "\n\nReply to the user's last message as clawd. At most 600 characters, plain text, no markdown, " +
   'no preamble.'
 const PANE = 'clawd-chat'
-// Buttons draw with their chrome, `[ dismiss ]`: 11 columns for the longest label.
-const BUTTON_COL = 11
 const HEADSUP_MIN_GAP_MS = 180_000 // at most one heads-up check every 3 minutes
 const HEADSUP_MIN_TOOLS = 3 // ...and only after a turn with real work in it
 const HEADSUP_MIN_TURN_MS = 60_000
@@ -418,13 +416,14 @@ export const register: Register = on => {
     const isMessage = said.source !== 'quip' && said.source !== 'nudge'
     const canExplain = said.source === 'headsup'
     const roomBase = cols - 13 - (showTrend ? 26 : 0) - (showActivity ? 24 : 0)
-    // Two passes: the buttons column only takes room when there are buttons.
-    const fitsWithout = wrap(said.text, Math.max(8, roomBase - 4), 200).length <= 2
-    const hasButtons = isMessage || canExplain || !fitsWithout
-    const avail = roomBase - (hasButtons ? BUTTON_COL + 1 : 0)
-    const inner = Math.max(8, avail - 4) // border + padding
-    const cut = wrap(said.text, inner, 200).length > 2
-    const shown = wrap(said.text, inner, 2)
+    // The bubble fills 4 rows with its outline; buttons go on a row under it, which
+    // leaves it 1 line of text instead of 2. Only quips and nudges (no buttons) get 2.
+    const inner = Math.max(8, roomBase - 4) // border + padding
+    const fullLines = wrap(said.text, inner, 200).length
+    const hasButtons = isMessage || canExplain || fullLines > 2
+    const textLines = hasButtons ? 1 : 2
+    const cut = fullLines > textLines
+    const shown = wrap(said.text, inner, textLines)
     const buttons = []
     if (cut) {
       const seed = said.text
@@ -454,16 +453,14 @@ export const register: Register = on => {
       )
     }
     const bubbleBox = (
-      <Box flexDirection="row" alignItems="flex-end" flexGrow={1} justifyContent="flex-end">
-        {buttons.length ? (
-          <Box flexDirection="column" width={BUTTON_COL} marginRight={1} justifyContent="flex-end">
-            {buttons}
+      <Box flexDirection="column" flexGrow={1}>
+        <Box flexDirection="row" alignItems="center">
+          <Box borderStyle="single" borderColor={bar} paddingX={1} flexGrow={1} flexDirection="column">
+            {shown.map((l, i) => <Text key={`b${i}`}>{l}</Text>)}
           </Box>
-        ) : null}
-        <Box borderStyle="single" borderColor={bar} paddingX={1} flexGrow={1} flexDirection="column">
-          {shown.map((l, i) => <Text key={`b${i}`}>{l}</Text>)}
+          <Text color={bar}>▶</Text>
         </Box>
-        <Text color={bar}>▶</Text>
+        {buttons.length ? <Box gap={1} paddingLeft={1}>{buttons}</Box> : null}
       </Box>
     )
 

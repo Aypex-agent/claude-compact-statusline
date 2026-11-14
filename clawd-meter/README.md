@@ -45,7 +45,7 @@ one right-aligned line: the bubble's text cut to fit, then the band's face, e.g.
   4. a note after a compaction, or after a turn over two minutes;
   5. a band-flavoured quip otherwise.
 
-  Buttons stack to its left when they apply: **`more`** when a message doesn't fit, which opens
+  Buttons sit in a row under it when they apply (the bubble then shows 1 line of text, not 2): **`more`** when a message doesn't fit, which opens
   the **clawd pane** (docked at about a quarter of the width on a wide terminal, inline on a
   narrow one) with the whole message and an input for follow-up questions; **`explain`** on a
   heads-up, which answers in more depth in the bubble; **`dismiss`**. `/ask`, heads-ups,
