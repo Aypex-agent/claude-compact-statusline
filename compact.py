@@ -5,8 +5,12 @@ Inspired by yas (tmck-code/yet-another-statusline), but every row is laid
 out to fit a narrow phone screen first and only spreads out when there is
 room. Uses plain Unicode glyphs that JetBrains Mono ships (no Nerd Font).
 
-Width: $PHONE_SL_WIDTH, else $COLUMNS, else the controlling tty, else 48;
-capped at $PHONE_SL_MAX (default 120; the original phone build used 72).
+Width: $PHONE_SL_WIDTH, else $COLUMNS (Claude Code passes the terminal
+width this way; the command has no controlling tty), else the tty, else 48.
+The box fills that width. $PHONE_SL_MAX caps it (default 0 = no cap; the
+original phone build used 72).
+Colours: the active Omarchy theme's colors.toml if there is one, else ANSI
+with a cyan accent. $PHONE_SL_THEME=ansi forces ANSI.
 $PHONE_SL_MARGIN (default 4) leaves room for Claude Code's indent.
 $PHONE_SL_FACE=0 hides the face next to the context band word.
 $PHONE_SL_TOOL_ROWS (default 2) caps the rows listing enabled plugins and
@@ -18,22 +22,63 @@ cluttered than the full-width alternatives.
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import time
 import unicodedata
 
-# ── palette (matches the cyan starship prompt) ──────────────────────────
+# ── palette ──────────────────────────────────────────────────────────────
+# Default: plain ANSI with a cyan accent (matches the phone's starship
+# prompt, and follows whatever palette the terminal maps ANSI to).
+# If an Omarchy theme is active, its colors.toml supplies the accent, the
+# frame and the band colours as truecolor, so the box retints with the
+# desktop theme. $PHONE_SL_THEME=ansi forces the plain palette;
+# $PHONE_SL_THEME_FILE points at another colors.toml.
 RST = "\033[0m"
 DIM = "\033[2m"
 BOLD = "\033[1m"
-CYAN = "\033[36m"
-BCYAN = "\033[1;36m"
+ACCENT = "\033[36m"     # branch, ⚙ glyph
+BACCENT = "\033[1;36m"  # model name, directory
 GREEN = "\033[32m"
+CYAN = "\033[36m"
 YELLOW = "\033[33m"
 RED = "\033[31m"
 MAG = "\033[35m"
-GREY = "\033[90m"
+GREY = "\033[90m"       # frame and secondary text
+OMARCHY_COLORS = "~/.local/state/omarchy/current/theme/colors.toml"
+
+
+def _theme_colors():
+    if os.environ.get("PHONE_SL_THEME", "auto") == "ansi":
+        return None
+    path = os.path.expanduser(os.environ.get("PHONE_SL_THEME_FILE") or OMARCHY_COLORS)
+    try:
+        with open(path) as f:
+            text = f.read()
+    except OSError:
+        return None
+    found = dict(re.findall(r'^\s*([a-z_]+)\s*=\s*"#([0-9A-Fa-f]{6})"', text, re.M))
+    return found or None
+
+
+def _tc(hexstr, bold=False):
+    r, g, b = (int(hexstr[i:i + 2], 16) for i in (0, 2, 4))
+    return f"\033[{'1;' if bold else ''}38;2;{r};{g};{b}m"
+
+
+_t = _theme_colors()
+if _t:
+    def _pick(*keys):
+        return next((_t[k] for k in keys if k in _t), None)
+    for _name, _keys in (("GREEN", ("green",)), ("CYAN", ("cyan",)), ("YELLOW", ("yellow",)),
+                         ("RED", ("red",)), ("MAG", ("magenta",)), ("GREY", ("muted", "dark_foreground"))):
+        _hex = _pick(*_keys)
+        if _hex:
+            globals()[_name] = _tc(_hex)
+    _acc = _pick("accent", "cyan")
+    if _acc:
+        ACCENT, BACCENT = _tc(_acc), _tc(_acc, bold=True)
 
 # context bands: (upper %, colour, word, face)
 # The face gets progressively less intelligent as the context fills,
@@ -233,8 +278,10 @@ def main():
 
     # Claude Code indents the statusline, so leave room on the right
     margin = int(os.environ.get("PHONE_SL_MARGIN", "4"))
-    cap = int(os.environ.get("PHONE_SL_MAX", "120"))
-    W = max(24, min(term_width() - margin, cap))
+    cap = int(os.environ.get("PHONE_SL_MAX", "0") or 0)
+    W = max(24, term_width() - margin)
+    if cap > 0:
+        W = min(W, cap)
     inner = W - 4  # "│ " + text + " │"
 
     model = (data.get("model") or {}).get("display_name", "Claude")
@@ -261,7 +308,7 @@ def main():
         face = ""
 
     # ── row 1: top border with model and clock ─────────────────────────
-    title = f" {BCYAN}{model}{RST}{GREY} "
+    title = f" {BACCENT}{model}{RST}{GREY} "
     clock = f" {time.strftime('%H:%M')} "
     fill = W - 2 - vis_len(title) - len(clock) - 1
     if fill >= 1:
@@ -292,7 +339,7 @@ def main():
     git = ""
     if g:
         branch, mod, new, ahead, behind = g
-        bits = [f"{CYAN}\033[3m{branch}{RST}"]
+        bits = [f"{ACCENT}\033[3m{branch}{RST}"]
         if ahead:
             bits.append(f"{GREEN}⇡{ahead}{RST}")
         if behind:
@@ -302,12 +349,12 @@ def main():
         if new:
             bits.append(f"{GREY}?{new}{RST}")
         git = " ".join(bits)
-    d = f"{BCYAN}{short_dir(cwd)}{RST}"
+    d = f"{BACCENT}{short_dir(cwd)}{RST}"
     if git and vis_len(d) + 1 + vis_len(git) <= inner:
         loc_row = spread(d, git, inner)
     elif git:
         # too narrow for both: shorten the path harder, then cut the branch
-        d = clip(f"{BCYAN}{short_dir(cwd, keep=1)}{RST}", inner // 2)
+        d = clip(f"{BACCENT}{short_dir(cwd, keep=1)}{RST}", inner // 2)
         loc_row = spread(d, clip(git, inner - vis_len(d) - 1), inner)
     else:
         loc_row = clip(d, inner)
@@ -333,7 +380,7 @@ def main():
         if names:
             # first row carries the glyph; later rows indent under it
             for i, text in enumerate(wrap_tools(names, inner - 2, max_rows)):
-                lead = f"{CYAN}⚙{RST} " if i == 0 else "  "
+                lead = f"{ACCENT}⚙{RST} " if i == 0 else "  "
                 tool_rows.append(f"{lead}{GREY}{text}{RST}")
 
     def row(s):

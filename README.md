@@ -54,6 +54,16 @@ Then point Claude Code at it in `~/.claude/settings.json`:
 
 Needs `python3` and `git` on `PATH`. Git rows are skipped outside a repo.
 
+## Width and colours
+
+The box fills the terminal. Claude Code runs the status line without a tty and passes
+the terminal width in `$COLUMNS`, so the box grows and shrinks with the window.
+
+When an [Omarchy](https://omarchy.org) theme is active, the accent, frame and band colours
+come from `~/.local/state/omarchy/current/theme/colors.toml` as truecolor and follow theme
+switches. Without one (the phone, or any other machine) it uses plain ANSI with a cyan accent,
+which the terminal maps to its own palette.
+
 ## Tuning
 
 All optional, set in the environment the status line command runs in
@@ -62,7 +72,9 @@ All optional, set in the environment the status line command runs in
 | Variable          | Default | Effect                                              |
 |-------------------|--------:|-----------------------------------------------------|
 | `PHONE_SL_WIDTH`  | auto    | Force the box width instead of detecting the tty    |
-| `PHONE_SL_MAX`    | `120`   | Width cap; the original phone build used `72`       |
+| `PHONE_SL_MAX`    | `0`     | Width cap; `0` fills the terminal. The original phone build used `72` |
+| `PHONE_SL_THEME`  | `auto`  | `ansi` ignores the Omarchy theme and keeps the plain ANSI palette |
+| `PHONE_SL_THEME_FILE` | Omarchy's | Path to a `colors.toml` to take colours from |
 | `PHONE_SL_MARGIN` | `4`     | Columns left free for Claude Code's own indent      |
 | `PHONE_SL_FACE`   | `1`     | `0` hides the face and keeps just the word          |
 | `PHONE_SL_TOOL_ROWS` | `2`  | Max rows for the plugin and MCP list; `0` hides it  |
