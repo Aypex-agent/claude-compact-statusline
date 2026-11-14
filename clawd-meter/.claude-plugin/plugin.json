@@ -1,6 +1,6 @@
 {
   "name": "clawd-meter",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Pixel-art fan mascot above the prompt that changes with how full the context window is",
   "types": "./types/index.d.ts",
   "author": {

@@ -77,6 +77,8 @@ const CHAT_PROMPT = (thread: ChatLine[]) =>
   "\n\nReply to the user's last message as clawd. At most 600 characters, plain text, no markdown, " +
   'no preamble.'
 const PANE = 'clawd-chat'
+// Buttons draw with their chrome, `[ dismiss ]`: 11 columns for the longest label.
+const BUTTON_COL = 11
 const HEADSUP_MIN_GAP_MS = 180_000 // at most one heads-up check every 3 minutes
 const HEADSUP_MIN_TOOLS = 3 // ...and only after a turn with real work in it
 const HEADSUP_MIN_TURN_MS = 60_000
@@ -419,7 +421,7 @@ export const register: Register = on => {
     // Two passes: the buttons column only takes room when there are buttons.
     const fitsWithout = wrap(said.text, Math.max(8, roomBase - 4), 200).length <= 2
     const hasButtons = isMessage || canExplain || !fitsWithout
-    const avail = roomBase - (hasButtons ? 10 : 0)
+    const avail = roomBase - (hasButtons ? BUTTON_COL + 1 : 0)
     const inner = Math.max(8, avail - 4) // border + padding
     const cut = wrap(said.text, inner, 200).length > 2
     const shown = wrap(said.text, inner, 2)
@@ -454,7 +456,7 @@ export const register: Register = on => {
     const bubbleBox = (
       <Box flexDirection="row" alignItems="flex-end" flexGrow={1} justifyContent="flex-end">
         {buttons.length ? (
-          <Box flexDirection="column" width={9} marginRight={1} justifyContent="flex-end">
+          <Box flexDirection="column" width={BUTTON_COL} marginRight={1} justifyContent="flex-end">
             {buttons}
           </Box>
         ) : null}
