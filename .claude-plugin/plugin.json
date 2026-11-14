@@ -1,0 +1,8 @@
+{
+  "name": "compact-statusline",
+  "version": "0.3.0",
+  "description": "Compact boxed status line for Claude Code: context bar with an ASCII mascot, git, cost, active plugins. Fits a phone terminal, fills a wide one.",
+  "author": { "name": "Aypex-agent" },
+  "license": "MIT",
+  "repository": "https://github.com/Aypex-agent/claude-compact-statusline"
+}

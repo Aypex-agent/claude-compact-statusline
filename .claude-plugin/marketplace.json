@@ -1,0 +1,17 @@
+{
+  "name": "compact-statusline",
+  "owner": { "name": "Aypex-agent" },
+  "description": "A compact boxed status line for Claude Code, and clawd-meter, a pixel-art context mascot that sits above the prompt.",
+  "plugins": [
+    {
+      "name": "compact-statusline",
+      "source": "./",
+      "description": "The status line, with an ASCII mascot for context fill"
+    },
+    {
+      "name": "clawd-meter",
+      "source": "./clawd-meter",
+      "description": "Pixel-art mascot, context trend, turn activity and a speech bubble above the prompt; installs compact-statusline too"
+    }
+  ]
+}

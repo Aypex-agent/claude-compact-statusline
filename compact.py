@@ -12,7 +12,9 @@ original phone build used 72).
 Colours: the active Omarchy theme's colors.toml if there is one, else ANSI
 with a cyan accent. $PHONE_SL_THEME=ansi forces ANSI.
 $PHONE_SL_MARGIN (default 4) leaves room for Claude Code's indent.
-$PHONE_SL_FACE=0 hides the face next to the context band word.
+$PHONE_SL_FACE=0 hides the face next to the context band word, =1 keeps it;
+unset, it is hidden when the clawd-meter plugin is enabled (its pixel mascot
+shows the band instead).
 $PHONE_SL_TOOL_ROWS (default 2) caps the rows listing enabled plugins and
 project MCP servers; 0 hides them.
 
@@ -304,7 +306,8 @@ def main():
         pct = used * 100 / size
     pct = max(0, min(100, round(pct or 0)))
     colour, word, face = next((c, w, f) for lim, c, w, f in BANDS if pct < lim)
-    if os.environ.get("PHONE_SL_FACE", "1") == "0":
+    face_env = os.environ.get("PHONE_SL_FACE", "")
+    if face_env == "0" or (face_env != "1" and "clawd-meter" in active_tools(ws.get("project_dir") or cwd)):
         face = ""
 
     # ── row 1: top border with model and clock ─────────────────────────
